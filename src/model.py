@@ -12,6 +12,7 @@ def inference(image_batch, batch_size, num_classes):
                                 shape = [16],
                                 dtype = tf.float32,
                                 initializer = tf.glorot_normal_initializer(seed = 1))
+        image_batch = tf.reshape(image_batch, shape = [-1, 28, 28, 1])
         conv1 = tf.nn.bias_add(tf.nn.conv2d(image_batch, weights, strides = [1,1,1,1], padding = 'SAME'), bias)
         layer1 = tf.nn.relu(conv1, name = scope.name)
 
