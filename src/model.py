@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
 
-def custom_model(xtrain, batch_size, num_classes):
+def inference(image_batch, batch_size, num_classes):
     with tf.variable_scope('Conv_1') as scope:
         weights = tf.get_variable('weights_1',
                                     shape = [3,3,1,16],
@@ -11,8 +11,8 @@ def custom_model(xtrain, batch_size, num_classes):
         bias = tf.get_variable('bias_1',
                                 shape = [16],
                                 dtype = tf.float32,
-                                initializer = tf.glorot_normal_initializer(seed = 1)))
-        conv1 = tf.nn.bias_add(tf.nn.conv2d(xtrain, weights, strides = [1,1,1,1], padding = 'SAME'), bias)
+                                initializer = tf.glorot_normal_initializer(seed = 1))
+        conv1 = tf.nn.bias_add(tf.nn.conv2d(image_batch, weights, strides = [1,1,1,1], padding = 'SAME'), bias)
         layer1 = tf.nn.relu(conv1, name = scope.name)
 
     with tf.variable_scope('maxpool_1') as scope:
@@ -26,7 +26,7 @@ def custom_model(xtrain, batch_size, num_classes):
         bias = tf.get_variable('bias_2',
                                 shape = [32],
                                 dtype = tf.float32,
-                                initializer = tf.glorot_normal_initializer(seed = 1)))
+                                initializer = tf.glorot_normal_initializer(seed = 1))
         conv2 = tf.nn.bias_add(tf.nn.conv2d(pool1, weights, strides = [1,1,1,1], padding = 'SAME'), bias)
         layer2 = tf.nn.relu(conv2, name = scope.name)
 
@@ -71,3 +71,11 @@ def optimizer(loss, learning_rate):
         global_Step = tf.Variable(0, name = 'global_step', trainable = False)
         train_op = optimizer.minimize(loss, global_step = global_step)
     return train_op
+
+def evaluate(logits, labels):
+    with tf.variable_scope('accuracy') as scope:
+        correct = tf.nn.in_top_k(logits, labels, 1)
+        correct = tf.cast(correct, tf.float16)
+        accuracy = tf.reduce_mean(correct)
+        tf.summary.scalar(scope.name+'/accuracy', accuracy)
+    return accuracy
