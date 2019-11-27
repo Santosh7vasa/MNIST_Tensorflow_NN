@@ -1,17 +1,18 @@
 import tensorflow as tf
 import numpy as np
 from tqdm import tqdm
+from dataset import create_dataset
 
 def inference(image_batch, batch_size, num_classes):
     with tf.variable_scope('Conv_1') as scope:
         weights = tf.get_variable('weights_1',
                                     shape = [3,3,1,16],
                                     dtype = tf.float32,
-                                    initializer = tf.glorot_normal_initializer(seed = 1))
+                                    initializer = tf.truncated_normal_initializer(stddev=0.1,dtype=tf.float32))
         bias = tf.get_variable('bias_1',
                                 shape = [16],
                                 dtype = tf.float32,
-                                initializer = tf.glorot_normal_initializer(seed = 1))
+                                initializer = tf.constant_initializer(0.1))
         image_batch = tf.reshape(image_batch, shape = [-1, 28, 28, 1])
         conv1 = tf.nn.bias_add(tf.nn.conv2d(image_batch, weights, strides = [1,1,1,1], padding = 'SAME'), bias)
         layer1 = tf.nn.relu(conv1, name = scope.name)
@@ -23,11 +24,11 @@ def inference(image_batch, batch_size, num_classes):
         weights = tf.get_variable('weights_2',
                                     shape = [3,3,16,32],
                                     dtype = tf.float32,
-                                    initializer = tf.glorot_normal_initializer(seed = 1))
+                                    initializer = tf.truncated_normal_initializer(stddev=0.1,dtype=tf.float32))
         bias = tf.get_variable('bias_2',
                                 shape = [32],
                                 dtype = tf.float32,
-                                initializer = tf.glorot_normal_initializer(seed = 1))
+                                initializer = tf.constant_initializer(0.1))
         conv2 = tf.nn.bias_add(tf.nn.conv2d(pool1, weights, strides = [1,1,1,1], padding = 'SAME'), bias)
         layer2 = tf.nn.relu(conv2, name = scope.name)
 
@@ -40,8 +41,8 @@ def inference(image_batch, batch_size, num_classes):
         weights = tf.get_variable('dense_weights_1',
                                     shape = [dim, 128],
                                     dtype=tf.float32,
-                                    initializer=tf.glorot_normal_initializer(seed = 1))
-        bias = tf.get_variable('dense_bias', shape = [128], initializer=tf.glorot_normal_initializer(seed = 1))
+                                    initializer= tf.truncated_normal_initializer(stddev=0.1,dtype=tf.float32))
+        bias = tf.get_variable('dense_bias', shape = [128], initializer= tf.constant_initializer(0.1))
 
         dense = tf.nn.relu(tf.add(tf.matmul(flatten, weights), bias), name = scope.name)
 
@@ -49,12 +50,12 @@ def inference(image_batch, batch_size, num_classes):
         weights  = tf.get_variable('dense_2',
                                     shape = [128, num_classes],
                                     dtype=tf.float32 ,
-                                    initializer = tf.glorot_normal_initializer(seed = 1))
+                                    initializer = tf.truncated_normal_initializer(stddev=0.1,dtype=tf.float32))
 
         bias = tf.get_variable('bias',
                                 shape = [num_classes],
                                 dtype=tf.float32,
-                                initializer = tf.glorot_normal_initializer(seed = 1))
+                                initializer = tf.constant_initializer(0.1))
         dense_2 = tf.nn.softmax(tf.add(tf.matmul(dense, weights), bias), name = scope.name)
 
     return dense_2
@@ -80,3 +81,22 @@ def evaluate(logits, labels):
         accuracy = tf.reduce_mean(correct)
         tf.summary.scalar(scope.name+'/accuracy', accuracy)
     return accuracy
+
+train, test = create_dataset(32,30)
+it_train = train.make_initializable_iterator()
+with tf.Session() as sess:
+    sess.run(tf.global_variables_initializer())
+    sess.run(it_train.initializer)
+    X, Y = it_train.get_next()
+    logits = inference(X,32,20)
+    loss = softmax_loss(logits,Y)
+    train_op = optimizer(loss, 0.001)
+    accuracy = evaluate(logits, Y)
+    for step in range(0,50000/32*30):
+        sess.run(train_op)
+        if step%100 == 0 or step == 1:
+
+            loss, acc = sess.run([loss, accuracy])
+            print("Step " + str(step) + ", Minibatch Loss= " + \
+      "{:.4f}".format(loss) + ", Training Accuracy= " + \
+      "{:.3f}".format(acc))

@@ -1,8 +1,6 @@
 import tensorflow as tf
 import numpy as np
-import cv2
 from tensorflow.keras.datasets import mnist
-import model
 
 def create_dataset(batch_size, epochs):
     (x_train, y_train),(x_test, y_test) = mnist.load_data()
@@ -18,3 +16,10 @@ def create_dataset(batch_size, epochs):
     test_dataset = test_dataset.map(preprocess, num_parallel_calls = 10)
     test_dataset = test_dataset.repeat(epochs).shuffle(buffer_size = 10000).batch(batch_size)
     return train_dataset, test_dataset
+
+# with tf.Session() as sess:
+#     data,_ = create_dataset(1,1)
+#     iterator = data.make_one_shot_iterator()
+#     image,label = iterator.get_next()
+#     print(sess.run(image))
+#     print(sess.run(label))
